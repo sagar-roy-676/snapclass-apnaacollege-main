@@ -1,3 +1,5 @@
+streamlit
+
 # Utilitites
 
 numpy
@@ -13,7 +15,9 @@ setuptools<70.0.0
 supabase
 bcrypt
 
-segna
+segno
 pillow
 
-streamlit
+
+librosa
+resemblyzer

@@ -1,5 +1,6 @@
 from datetime import datetime
 import time
+from zoneinfo import ZoneInfo
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -14,14 +15,21 @@ from src.database.db import (
 )
 from src.pipelines.face_pipelines import predict_attendance
 from src.screens.components.dialog_add_photo import add_photos_dialog
-from src.screens.components.dialog_attendance_results import attendance_result_dialog
+from src.screens.components.dialog_attendance_results import (
+    attendance_result_dialog,
+)
 from src.screens.components.dialog_create_subject import create_subject_dialog
 from src.screens.components.dialog_share_subject import share_subject_dialog
-from src.screens.components.dialog_voice_attendance import voice_attendance_dialog
+from src.screens.components.dialog_voice_attendance import (
+    voice_attendance_dialog,
+)
 from src.screens.components.footer import footer_dashboard
 from src.screens.components.header import header_dashboard
 from src.screens.components.subject_card import subject_card
 from src.ui.base_layout import style_background_dashboard, style_base_layout
+
+# Define target timezone globally
+IST_TZ = ZoneInfo("Asia/Kolkata")
 
 
 def teacher_screen():
@@ -129,7 +137,9 @@ def teacher_tab_take_attendance():
     subjects = get_teacher_subjects(teacher_id)
 
     if not subjects:
-        st.warning("You haven't created any subjects yet! Please create one to begin.")
+        st.warning(
+            "You haven't created any subjects yet! Please create one to begin."
+        )
         return
 
     subject_options = {
@@ -211,12 +221,15 @@ def teacher_tab_take_attendance():
                     .eq("subject_id", selected_subject_id)
                     .execute()
                 )
-                enrolled_students = enrolled_res.data if enrolled_res else []
+                enrolled_students = (
+                    enrolled_res.data if enrolled_res else []
+                )
 
                 if not enrolled_students:
                     st.warning("No students enrolled in this course.")
                 else:
-                    current_timestamp = datetime.now().strftime(
+                    # Captures live timestamp directly in IST timezone
+                    current_timestamp = datetime.now(IST_TZ).strftime(
                         "%Y-%m-%dT%H:%M:%S"
                     )
 
@@ -287,7 +300,9 @@ def teacher_tab_manage_subjects():
                     key=f"share_{subject['subject_id']}",
                     icon=":material/share:",
                 ):
-                    share_subject_dialog(subject["name"], subject["subject_code"])
+                    share_subject_dialog(
+                        subject["name"], subject["subject_code"]
+                    )
 
             subject_card(
                 name=sub["name"],
@@ -311,17 +326,28 @@ def teacher_tab_attendance_records():
         return
 
     data = []
+
     for r in records:
         ts = r.get("timestamp")
 
+        formatted_time = "N/A"
+        ts_group = None
+
+        if ts:
+            dt = datetime.fromisoformat(ts)
+            if dt.tzinfo is None:
+                # Assign UTC if naive ISO timestamp from DB, then convert to IST
+                dt = dt.replace(tzinfo=ZoneInfo("UTC")).astimezone(IST_TZ)
+            else:
+                dt = dt.astimezone(IST_TZ)
+
+            formatted_time = dt.strftime("%Y-%m-%d %I:%M %p")
+            ts_group = dt.strftime("%Y-%m-%d %H:%M:%S")
+
         data.append(
             {
-                "ts_group": ts.split(".")[0] if ts else None,
-                "Time": (
-                    datetime.fromisoformat(ts).strftime("%Y-%m-%d %I:%M %p")
-                    if ts
-                    else "N/A"
-                ),
+                "ts_group": ts_group,
+                "Time": formatted_time,
                 "Subject": r["subjects"]["name"],
                 "Subject Code": r["subjects"]["subject_code"],
                 "is_present": bool(r.get("is_present", False)),
@@ -386,7 +412,9 @@ def teacher_screen_login():
     st.header("Login using password")
 
     with st.form("teacher_login_form"):
-        teacher_username = st.text_input("Enter username", placeholder="sagarroy")
+        teacher_username = st.text_input(
+            "Enter username", placeholder="sagarroy"
+        )
         teacher_pass = st.text_input(
             "Enter password", type="password", placeholder="Enter password"
         )
@@ -456,7 +484,9 @@ def teacher_screen_register():
     st.header("Register your teacher profile")
 
     with st.form("teacher_register_form"):
-        teacher_username = st.text_input("Enter username", placeholder="sagarroy")
+        teacher_username = st.text_input(
+            "Enter username", placeholder="sagarroy"
+        )
         teacher_name = st.text_input("Enter name", placeholder="sagar Roy")
         teacher_pass = st.text_input(
             "Enter password", type="password", placeholder="Enter password"

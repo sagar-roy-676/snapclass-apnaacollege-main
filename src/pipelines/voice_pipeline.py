@@ -13,13 +13,14 @@ def load_voice_encoder():
 def get_voice_embedding(audio_bytes):
     try:
         encoder = load_voice_encoder()
-
-        # Load audio from bytes at 16kHz
         audio, sr = librosa.load(io.BytesIO(audio_bytes), sr=16000)
+        
+        if len(audio) == 0:
+            return None
+
         wav = preprocess_wav(audio)
         embedding = encoder.embed_utterance(wav)
 
-        # Ensure L2 normalization
         norm = np.linalg.norm(embedding)
         if norm > 0:
             embedding = embedding / norm
@@ -30,11 +31,14 @@ def get_voice_embedding(audio_bytes):
         return None
 
 
-def identify_speaker(new_embedding, candidates_dict, threshold=0.65):
+def identify_speaker(new_embedding, candidates_dict, threshold=0.45):
+    """
+    Compares query embedding against candidates using Cosine Similarity.
+    Threshold lowered to 0.45 to account for short classroom audio clips.
+    """
     if new_embedding is None or not candidates_dict:
         return None, 0.0
 
-    # Ensure query embedding is a 1D float numpy array and normalized
     query_emb = np.array(new_embedding, dtype=np.float32)
     query_norm = np.linalg.norm(query_emb)
     if query_norm > 0:
@@ -43,21 +47,20 @@ def identify_speaker(new_embedding, candidates_dict, threshold=0.65):
     best_sid = None
     best_score = -1.0
 
+    # Ensure all keys are normalized as strings to avoid type mismatches
     for sid, stored_embedding in candidates_dict.items():
         if stored_embedding:
-            # Convert DB vector list to numpy array
             candidate_emb = np.array(stored_embedding, dtype=np.float32)
-
             cand_norm = np.linalg.norm(candidate_emb)
+            
             if cand_norm > 0:
                 candidate_emb = candidate_emb / cand_norm
 
-            # Cosine similarity calculation
             similarity = float(np.dot(query_emb, candidate_emb))
 
             if similarity > best_score:
                 best_score = similarity
-                best_sid = sid
+                best_sid = str(sid)  # Always return ID as string
 
     if best_score >= threshold:
         return best_sid, best_score
@@ -65,36 +68,44 @@ def identify_speaker(new_embedding, candidates_dict, threshold=0.65):
     return None, best_score
 
 
-def process_bulk_audio(audio_bytes, candidates_dict, threshold=0.65):
+def process_bulk_audio(audio_bytes, candidates_dict, threshold=0.45):
     try:
         encoder = load_voice_encoder()
 
         audio, sr = librosa.load(io.BytesIO(audio_bytes), sr=16000)
+        if len(audio) == 0:
+            return {}
 
-        # Split audio on silent pauses (top_db=30)
-        segments = librosa.effects.split(audio, top_db=30)
+        # Split audio on silent pauses
+        segments = librosa.effects.split(audio, top_db=25)
+
+        # Fallback: if no segments split, evaluate entire audio
+        if len(segments) == 0:
+            segments = [(0, len(audio))]
 
         identified_results = {}
 
         for start, end in segments:
-            # Ignore audio slices shorter than 0.5 seconds
-            if (end - start) < sr * 0.5:
+            # Slices must be at least 0.3s
+            if (end - start) < sr * 0.3:
                 continue
 
             segment_audio = audio[start:end]
             wav = preprocess_wav(segment_audio)
+            
+            if len(wav) == 0:
+                continue
+
             embedding = encoder.embed_utterance(wav)
 
             sid, score = identify_speaker(
                 embedding, candidates_dict, threshold
             )
 
-            if sid:
-                if (
-                    sid not in identified_results
-                    or score > identified_results[sid]
-                ):
-                    identified_results[sid] = score
+            if sid is not None:
+                sid_str = str(sid)
+                if sid_str not in identified_results or score > identified_results[sid_str]:
+                    identified_results[sid_str] = score
 
         return identified_results
     except Exception as e:

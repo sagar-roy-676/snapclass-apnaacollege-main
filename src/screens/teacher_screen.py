@@ -15,9 +15,6 @@ from src.database.db import (
 )
 from src.pipelines.face_pipelines import predict_attendance
 from src.screens.components.dialog_add_photo import add_photos_dialog
-from src.screens.components.dialog_attendance_results import (
-    attendance_result_dialog,
-)
 from src.screens.components.dialog_create_subject import create_subject_dialog
 from src.screens.components.dialog_share_subject import share_subject_dialog
 from src.screens.components.dialog_voice_attendance import (
@@ -35,6 +32,17 @@ IST_TZ = ZoneInfo("Asia/Kolkata")
 def teacher_screen():
     style_background_dashboard()
     style_base_layout()
+
+    # Safely render results dialog from the top level if triggered
+    if st.session_state.get("show_results_dialog"):
+        from src.screens.components.dialog_attendance_results import (
+            attendance_result_dialog,
+        )
+
+        res_data = st.session_state.get("voice_attendance_results")
+        if res_data:
+            df_results, logs = res_data
+            attendance_result_dialog(df_results, logs)
 
     if "teacher_data" in st.session_state:
         teacher_dashboard()
@@ -262,9 +270,12 @@ def teacher_tab_take_attendance():
                             }
                         )
 
-                    attendance_result_dialog(
-                        pd.DataFrame(results), attendance_to_log
+                    st.session_state.voice_attendance_results = (
+                        pd.DataFrame(results),
+                        attendance_to_log,
                     )
+                    st.session_state.show_results_dialog = True
+                    st.rerun()
 
     with c3:
         if st.button(

@@ -21,7 +21,7 @@ def voice_attendance_dialog(selected_subject_id):
         "⚠️ *Ensure browser mic permission is granted and speak clearly into the microphone.*"
     )
 
-    if st.button("Analyze Audio", use_container_width=True, type="primary"):
+    if st.button("Analyze Audio", width="stretch", type="primary"):
         if audio_data is None:
             st.warning("Please record classroom audio first before analyzing!")
             return
@@ -39,7 +39,6 @@ def voice_attendance_dialog(selected_subject_id):
                 st.warning("No students enrolled in this course.")
                 return
 
-            # Force key to string format: str(student_id)
             candidates_dict = {
                 str(s["students"]["student_id"]): s["students"]["voice_embedding"]
                 for s in enrolled_students
@@ -52,20 +51,16 @@ def voice_attendance_dialog(selected_subject_id):
 
             audio_bytes = audio_data.getvalue()
 
-            # detected_scores keys are strings
             detected_scores = process_bulk_audio(audio_bytes, candidates_dict, threshold=0.45)
 
             results, attendance_to_log = [], []
 
-            current_timestamp = datetime.now(IST_TZ).strftime(
-                "%Y-%m-%dT%H:%M:%S"
-            )
+            current_timestamp = datetime.now(IST_TZ).isoformat()
 
             for node in enrolled_students:
                 student = node["students"]
                 sid_str = str(student["student_id"])
                 
-                # Safe lookup using string ID
                 score = detected_scores.get(sid_str, 0.0)
                 is_present = bool(score > 0)
 

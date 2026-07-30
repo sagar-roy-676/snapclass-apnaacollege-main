@@ -87,7 +87,7 @@ def teacher_dashboard():
         if st.button(
             "Take Attendance",
             type=type1,
-            use_container_width=True,
+            width="stretch",
             icon=":material/ar_on_you:",
         ):
             st.session_state.current_teacher_tab = "take_attendance"
@@ -102,7 +102,7 @@ def teacher_dashboard():
         if st.button(
             "Manage Subjects",
             type=type2,
-            use_container_width=True,
+            width="stretch",
             icon=":material/book_ribbon:",
         ):
             st.session_state.current_teacher_tab = "manage_subjects"
@@ -117,7 +117,7 @@ def teacher_dashboard():
         if st.button(
             "Attendance Records",
             type=type3,
-            use_container_width=True,
+            width="stretch",
             icon=":material/cards_stack:",
         ):
             st.session_state.current_teacher_tab = "attendance_records"
@@ -166,7 +166,7 @@ def teacher_tab_take_attendance():
             "Add Photos",
             type="primary",
             icon=":material/photo_prints:",
-            use_container_width=True,
+            width="stretch",
         ):
             add_photos_dialog()
 
@@ -181,7 +181,7 @@ def teacher_tab_take_attendance():
         for idx, img in enumerate(st.session_state.attendance_images):
             with gallery_cols[idx % 4]:
                 st.image(
-                    img, use_container_width=True, caption=f"Photo {idx+1}"
+                    img, width="stretch", caption=f"Photo {idx+1}"
                 )
 
     has_photos = bool(st.session_state.attendance_images)
@@ -190,7 +190,7 @@ def teacher_tab_take_attendance():
     with c1:
         if st.button(
             "Clear all photos",
-            use_container_width=True,
+            width="stretch",
             type="tertiary",
             icon=":material/delete:",
             disabled=not has_photos,
@@ -201,7 +201,7 @@ def teacher_tab_take_attendance():
     with c2:
         if st.button(
             "Run Face Analysis",
-            use_container_width=True,
+            width="stretch",
             type="secondary",
             icon=":material/analytics:",
             disabled=not has_photos,
@@ -236,10 +236,7 @@ def teacher_tab_take_attendance():
                 if not enrolled_students:
                     st.warning("No students enrolled in this course.")
                 else:
-                    # Captures live timestamp directly in IST timezone
-                    current_timestamp = datetime.now(IST_TZ).strftime(
-                        "%Y-%m-%dT%H:%M:%S"
-                    )
+                    current_timestamp = datetime.now(IST_TZ).isoformat()
 
                     for node in enrolled_students:
                         student = node["students"]
@@ -281,7 +278,7 @@ def teacher_tab_take_attendance():
         if st.button(
             "Use Voice Attendance",
             type="primary",
-            use_container_width=True,
+            width="stretch",
             icon=":material/mic:",
         ):
             voice_attendance_dialog(selected_subject_id)
@@ -294,7 +291,7 @@ def teacher_tab_manage_subjects():
         st.header("Manage Subjects")
 
     with col2:
-        if st.button("Create New Subject", use_container_width=True):
+        if st.button("Create New Subject", width="stretch"):
             create_subject_dialog(teacher_id)
 
     subjects = get_teacher_subjects(teacher_id)
@@ -347,8 +344,7 @@ def teacher_tab_attendance_records():
         if ts:
             dt = datetime.fromisoformat(ts)
             if dt.tzinfo is None:
-                # Assign UTC if naive ISO timestamp from DB, then convert to IST
-                dt = dt.replace(tzinfo=ZoneInfo("UTC")).astimezone(IST_TZ)
+                dt = dt.replace(tzinfo=IST_TZ)
             else:
                 dt = dt.astimezone(IST_TZ)
 
@@ -388,7 +384,7 @@ def teacher_tab_attendance_records():
         ["Time", "Subject", "Subject Code", "Attendance Stats"]
     ]
 
-    st.dataframe(display_df, use_container_width=True, hide_index=True)
+    st.dataframe(display_df, width="stretch", hide_index=True)
 
 
 def login_teacher(username, password):
@@ -436,14 +432,14 @@ def teacher_screen_login():
             submit_login = st.form_submit_button(
                 "Login",
                 icon=":material/passkey:",
-                use_container_width=True,
+                width="stretch",
             )
         with btnc2:
             goto_register = st.form_submit_button(
                 "Register Instead",
                 type="primary",
                 icon=":material/passkey:",
-                use_container_width=True,
+                width="stretch",
             )
 
     if submit_login:
@@ -514,14 +510,14 @@ def teacher_screen_register():
             submit_register = st.form_submit_button(
                 "Register now",
                 icon=":material/passkey:",
-                use_container_width=True,
+                width="stretch",
             )
         with btnc2:
             goto_login = st.form_submit_button(
                 "Login Instead",
                 type="primary",
                 icon=":material/passkey:",
-                use_container_width=True,
+                width="stretch",
             )
 
     if submit_register:

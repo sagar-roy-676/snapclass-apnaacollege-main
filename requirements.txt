@@ -8,6 +8,7 @@ pandas
 # face recognition
 scikit-learn
 dlib-bin
+opencv-python-headless
 
 git+https://github.com/ageitgey/face_recognition_models
 setuptools<70.0.0

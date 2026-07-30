@@ -25,7 +25,6 @@ from src.screens.components.header import header_dashboard
 from src.screens.components.subject_card import subject_card
 from src.ui.base_layout import style_background_dashboard, style_base_layout
 
-# Define target timezone globally
 IST_TZ = ZoneInfo("Asia/Kolkata")
 
 
@@ -33,7 +32,6 @@ def teacher_screen():
     style_background_dashboard()
     style_base_layout()
 
-    # Safely render results dialog from the top level if triggered
     if st.session_state.get("show_results_dialog"):
         from src.screens.components.dialog_attendance_results import (
             attendance_result_dialog,
@@ -212,17 +210,6 @@ def teacher_tab_take_attendance():
             with st.spinner("Deep scanning classroom photos..."):
                 all_detected_ids = {}
 
-                for idx, img in enumerate(st.session_state.attendance_images):
-                    img_np = np.array(img.convert("RGB"))
-                    detected, _, _ = predict_attendance(img_np)
-
-                    if detected:
-                        for sid in detected.keys():
-                            student_id = int(sid)
-                            all_detected_ids.setdefault(student_id, []).append(
-                                f"Photo {idx+1}"
-                            )
-
                 enrolled_res = (
                     supabase.table("subject_students")
                     .select("*, students(*)")
@@ -236,6 +223,26 @@ def teacher_tab_take_attendance():
                 if not enrolled_students:
                     st.warning("No students enrolled in this course.")
                 else:
+                    enrolled_ids = [
+                        int(s["students"]["student_id"])
+                        for s in enrolled_students
+                        if s.get("students")
+                    ]
+
+                    for idx, img in enumerate(st.session_state.attendance_images):
+                        img_np = np.array(img.convert("RGB"))
+                        
+                        detected, _, _ = predict_attendance(
+                            img_np, allowed_student_ids=enrolled_ids
+                        )
+
+                        if detected:
+                            for sid in detected.keys():
+                                student_id = int(sid)
+                                all_detected_ids.setdefault(student_id, []).append(
+                                    f"Photo {idx+1}"
+                                )
+
                     current_timestamp = datetime.now(IST_TZ).isoformat()
 
                     for node in enrolled_students:

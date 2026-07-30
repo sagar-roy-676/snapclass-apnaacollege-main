@@ -66,6 +66,13 @@ def get_trained_model():
     return {"X": np.array(X), "y": np.array(y)}
 
 
+def train_classifier():
+    """Re-syncs cache and reloads model data from the database."""
+    st.cache_resource.clear()
+    model_data = get_trained_model()
+    return bool(model_data)
+
+
 def predict_attendance(class_image_np, allowed_student_ids=None):
     encodings = get_face_embeddings(class_image_np)
     detected_student = {}
@@ -83,7 +90,6 @@ def predict_attendance(class_image_np, allowed_student_ids=None):
     else:
         allowed_set = set(y_train)
 
-    # Threshold set to 0.72 for group photos and varying lighting
     resemblance_threshold = 0.72
 
     for encoding in encodings:
